@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="lt">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Flight Station V2</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#2878dc">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<style>
+*{box-sizing:border-box}html,body{margin:0;height:100%;font-family:Inter,Arial,sans-serif;background:#eef1f4}
+#map{height:100vh;position:relative;overflow:hidden;background:#fafafa}
+.leaflet-container{font:inherit;background:#dfe8ee}
+.leaflet-control-zoom{display:none}.leaflet-control-scale{display:none}.leaflet-control-attribution{font-size:9px;background:#ffffffb8!important}
+.aircraft-dot{width:18px;height:18px;background:#2878dc;border:2px solid #fff;border-radius:50%;box-shadow:0 1px 5px #0005}
+.centerBtn{position:absolute;left:50%;top:28px;transform:translateX(-50%);z-index:1000;padding:16px 28px;width:auto;height:auto;font-size:24px;font-weight:600;border:2px solid #cfd4da;border-radius:16px;background:#fff;box-shadow:0 2px 6px #00000012;cursor:pointer}.centerBtn.active{background:#2878dc;color:#fff;border-color:#2878dc}
+.controls{position:absolute;left:32px;top:32px;display:flex;flex-direction:column;gap:12px;z-index:1000}.controls button{width:72px;height:72px;border:2px solid #cfd4da;border-radius:16px;background:#fff;font-size:42px;cursor:pointer;box-shadow:0 2px 6px #00000012}.controls button:active{background:#f0f2f4}
+.zoom{position:absolute;left:16px;bottom:16px;z-index:1000;background:#ffffffdb;border:1px solid #d7dbe0;border-radius:7px;padding:12px 18px;font-size:24px;text-align:center;box-shadow:0 2px 6px #0000000d;white-space:nowrap}
+.hud{position:absolute;right:36px;top:36px;width:460px;pointer-events:none;z-index:1000;display:flex;flex-direction:column;gap:20px}.hudPanel{background:#ffffffdb;border:2px solid #d7dbe0;border-radius:20px;padding:20px 24px;box-shadow:0 4px 16px #00000012}.metric{padding:10px 0}.label{font-size:20px;text-transform:uppercase;letter-spacing:.08em;color:#777}.value{font-size:32px;font-weight:650;margin-top:4px;color:#20242a}.connected{color:#16803a}
+.deviceOverlay{position:absolute;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;background:#00000038}.devicePanel{width:660px;background:#fff;border:2px solid #d5d9de;border-radius:24px;padding:36px;box-shadow:0 8px 30px #0003}.devicePanel h2{margin:0 0 14px;font-size:36px;color:#20242a}.devicePanel p{margin:0 0 28px;font-size:26px;color:#666;line-height:1.4}.deviceOptions{display:flex;flex-direction:column;gap:14px}.deviceOption{width:100%;height:76px;border:2px solid #cfd4da;border-radius:16px;background:#fff;color:#20242a;font-size:26px;font-weight:600;cursor:pointer}.deviceOption:hover{background:#f4f6f8;border-color:#2878dc}.deviceOption:active{background:#e9edf1}.startOverlay{position:absolute;inset:0;z-index:2000;display:flex;align-items:center;justify-content:center;background:#00000038}.startPanel{width:660px;background:#fff;border:2px solid #d5d9de;border-radius:24px;padding:36px;box-shadow:0 8px 30px #0003}.startPanel h2{margin:0 0 14px;font-size:36px;color:#20242a}.startPanel p{margin:0 0 28px;font-size:26px;color:#666;line-height:1.4}.startHint{font-size:24px;color:#777;margin-bottom:24px}.confirmStart{width:100%;height:76px;border:0;border-radius:16px;background:#2878dc;color:#fff;font-weight:650;cursor:pointer}.confirmStart:disabled{background:#c8ced6;cursor:not-allowed}.home-dot{width:16px;height:16px;background:#fff;border:3px solid #e05a47;border-radius:50%;box-shadow:0 1px 5px #0005}.startConfirmBar{position:absolute;left:50%;bottom:44px;transform:translateX(-50%);z-index:2100;width:660px;background:#fff;border:2px solid #d5d9de;border-radius:24px;padding:28px 32px;box-shadow:0 8px 30px #0003;display:none}.startConfirmBar p{margin:0 0 20px;font-size:26px;color:#444;line-height:1.35}.confirmSelected{width:100%;height:76px;border:0;border-radius:16px;background:#2878dc;color:#fff;font-weight:650;cursor:pointer}
+.status{position:absolute;left:32px;bottom:32px;z-index:1000;background:#ffffffd0;border:2px solid #d0d4d8;border-radius:14px;padding:12px 18px;font-size:22px;color:#666}
+.gpsBtn{position:absolute;left:32px;bottom:90px;z-index:1000;background:#fff;border:2px solid #cfd4da;border-radius:14px;padding:12px 18px;font-size:22px;font-weight:600;color:#20242a;cursor:pointer;box-shadow:0 2px 6px #00000012}.gpsBtn.active{background:#16803a;color:#fff;border-color:#16803a}.gpsBtn.error{background:#c0392b;color:#fff;border-color:#c0392b}
+.channelOverlay{position:absolute;inset:0;z-index:3500;display:flex;align-items:center;justify-content:center;background:#00000038}.channelPanel{width:660px;background:#fff;border:2px solid #d5d9de;border-radius:24px;padding:36px;box-shadow:0 8px 30px #0003}.channelPanel h2{margin:0 0 14px;font-size:36px;color:#20242a}.channelPanel p{margin:0 0 28px;font-size:26px;color:#666;line-height:1.4}.channelPanel label{display:block;font-size:20px;color:#555;margin:0 0 8px}.channelPanel input{width:100%;height:64px;border:2px solid #cfd4da;border-radius:14px;padding:0 16px;font-size:24px;margin:0 0 18px;outline:none}.channelPanel input:focus{border-color:#2878dc}.channelAction{font-size:22px;height:70px;margin-top:6px}.channelBack{width:100%;height:58px;border:2px solid #cfd4da;border-radius:14px;background:#fff;font-size:20px;cursor:pointer;margin-top:12px}.channelOk{font-size:22px;color:#16803a;background:#eef8f1;border:2px solid #b9dfc5;border-radius:14px;padding:16px;margin-top:16px;line-height:1.4}.phone-mode .gpsBtn{transform:scale(.333333);transform-origin:left bottom}
+.leaflet-bar a{color:#20242a}
+/* Phone layout: regular UI is 3x smaller; start/confirmation overlays are 2x smaller. */
+.phone-mode .centerBtn{left:auto;right:32px;top:auto;bottom:32px;transform:scale(.333333);transform-origin:right bottom}
+.phone-mode .controls{transform:scale(.333333);transform-origin:left top}
+.phone-mode .hud{transform:scale(.333333);transform-origin:right top}
+.phone-mode .status{transform:scale(.333333);transform-origin:left bottom}
+.phone-mode .startOverlay .startPanel{transform:scale(.5);transform-origin:center}
+.phone-mode .startConfirmBar{transform:translateX(-50%) scale(.5);transform-origin:center bottom}
+</style>
+</head>
+<body>
+<div id="map"></div>
+<button class="centerBtn" id="centerBtn">Centravimas: OFF</button>
+<div class="deviceOverlay" id="deviceOverlay"><div class="devicePanel"><h2>Su kokiu įrenginiu bandoma prisijungti?</h2><p>Pasirinkite naudojamą įrenginį.</p><div class="deviceOptions"><button class="deviceOption" data-device="phone">Telefonas</button><button class="deviceOption" data-device="computer">Kompiuteris</button><button class="deviceOption" data-device="tablet">Planšetė</button></div></div></div>
+<div class="channelOverlay" id="channelOverlay" style="display:none"><div class="channelPanel">
+  <h2>Prisijungimas prie kanalo</h2><p id="channelIntro">Pasirinkite, ką norite daryti.</p>
+  <div class="deviceOptions" id="channelChoices">
+    <button class="deviceOption" id="createChannelBtn">Sukurti kanalą</button>
+    <button class="deviceOption" id="joinChannelBtn">Prisijungti prie kanalo</button>
+  </div>
+  <div id="createForm" style="display:none">
+    <label>Kanalo pavadinimas</label><input id="channelNameCreate" autocomplete="off" placeholder="pvz. TEST-01">
+    <label>Slaptažodis</label><input id="channelPasswordCreate" type="password" autocomplete="new-password" placeholder="Slaptažodis">
+    <button class="confirmStart channelAction" id="createConfirm">Sukurti ir tapti Command Station</button>
+  </div>
+  <div id="joinForm" style="display:none">
+    <label>Kanalo pavadinimas</label><input id="channelNameJoin" autocomplete="off" placeholder="pvz. TEST-01">
+    <label>Slaptažodis</label><input id="channelPasswordJoin" type="password" autocomplete="current-password" placeholder="Slaptažodis">
+    <button class="confirmStart channelAction" id="joinConfirm">Prisijungti kaip UAV</button>
+  </div>
+  <div id="channelStatus" style="display:none"></div>
+</div></div>
+<div class="startOverlay" id="startOverlay"><div class="startPanel"><h2>Pasirinkite pradžios tašką</h2><p>Paspaudę „Supratau“, kitą kartą paspaudę žemėlapyje pasirinksite skrydžio pradžios tašką.</p><button class="confirmStart" id="confirmStart">Supratau</button></div></div>
+<div class="startConfirmBar" id="startConfirmBar"><p>Pradžios taškas pasirinktas. Patvirtinkite skrydžio pradžią.</p><button class="confirmSelected" id="confirmSelected">Patvirtinti pradžios tašką</button></div>
+<div class="zoom" id="zoom">Mastelis: <span id="scaleKm">—</span></div>
+<button class="gpsBtn" id="gpsBtn">GPS: OFF</button>
+<div class="controls"><button id="plus" type="button">+</button><button id="minus" type="button">−</button></div>
+<div class="hud">
+  <div class="hudPanel">
+    <div class="metric"><div class="label">Latitude</div><div class="value" id="lat">54.89820°</div></div>
+    <div class="metric"><div class="label">Longitude</div><div class="value" id="lon">23.90450°</div></div>
+    <div class="metric"><div class="label">Aukštis</div><div class="value" id="altitude">—</div></div>
+    <div class="metric"><div class="label">Atstumas iki pradžios</div><div class="value" id="distance">—</div></div>
+  </div>
+  <div class="hudPanel">
+    <div class="metric"><div class="label">GPS Satellites</div><div class="value" id="gps">—</div></div>
+    <div class="metric"><div class="label">Link</div><div class="value connected" id="link">Connected</div></div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+const INITIAL={lat:54.89820,lng:23.90450};
+const map=L.map('map',{zoomControl:false,attributionControl:true,preferCanvas:true}).setView([55.25,23.97],7);
+const HeaderTileLayer=L.TileLayer.extend({
+  createTile:function(coords,done){
+    const tile=document.createElement('img');
+    tile.alt='';
+    tile.setAttribute('role','presentation');
+    const url=this.getTileUrl(coords);
+    fetch(url,{headers:{'X-Requested-With':'FlightStationV2'}})
+      .then(res=>{if(!res.ok)throw new Error('Tile HTTP '+res.status);return res.blob();})
+      .then(blob=>{tile.src=URL.createObjectURL(blob);tile.onload=()=>{URL.revokeObjectURL(tile.src);done(null,tile)};})
+      .catch(err=>done(err,tile));
+    return tile;
+  }
+});
+new HeaderTileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  maxZoom:19,
+  attribution:'&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+L.control.scale({imperial:false,maxWidth:120}).addTo(map);
+
+const planeIcon=L.divIcon({className:'',html:'<div class="aircraft-dot"></div>',iconSize:[18,18],iconAnchor:[9,9]});
+const homeIcon=L.divIcon({className:'',html:'<div class="home-dot"></div>',iconSize:[16,16],iconAnchor:[8,8]});
+const plane=L.marker([INITIAL.lat,INITIAL.lng],{icon:planeIcon,draggable:false,zIndexOffset:1000});
+const route=L.polyline([], {color:'#2878dc',weight:3,opacity:.9,lineCap:'round',lineJoin:'round'}).addTo(map);
+let homeMarker=null;
+let homePoint=null;
+let centerMode=false;
+let trailPoints=[];
+let startSelected=false;
+
+const centerBtn=document.getElementById('centerBtn');
+const latEl=document.getElementById('lat');
+const lonEl=document.getElementById('lon');
+const scaleEl=document.getElementById('scaleKm');
+const distanceEl=document.getElementById('distance');
+const startOverlay=document.getElementById('startOverlay');
+const deviceOverlay=document.getElementById('deviceOverlay');
+const confirmStart=document.getElementById('confirmStart');
+const gpsBtn=document.getElementById('gpsBtn');
+const gpsEl=document.getElementById('gps');
+const altitudeEl=document.getElementById('altitude');
+const linkEl=document.getElementById('link');
+let gpsWatchId=null;
+let gpsActive=false;
+let lastGpsLatLng=null;
+
+function setGpsState(state,text){
+  gpsBtn.textContent=text;
+  gpsBtn.classList.toggle('active',state==='active');
+  gpsBtn.classList.toggle('error',state==='error');
+  linkEl.textContent=state==='active'?'GPS Connected':state==='error'?'GPS Error':'Waiting';
+  linkEl.classList.toggle('connected',state==='active');
+}
+function addGpsTrail(p){
+  if(!startSelected) return;
+  const last=trailPoints[trailPoints.length-1];
+  if(!last || map.distance(L.latLng(last[0],last[1]),p)>=12){
+    trailPoints.push([p.lat,p.lng]);
+    if(trailPoints.length>1000) trailPoints.shift();
+    route.setLatLngs(trailPoints);
+  }
+}
+function onGpsPosition(pos){
+  if(!startSelected) return;
+  const c=pos.coords;
+  const p=L.latLng(c.latitude,c.longitude);
+  lastGpsLatLng=p;
+  plane.setLatLng(p);
+  addGpsTrail(p);
+  altitudeEl.textContent=c.altitude==null?'—':Math.round(c.altitude)+' m';
+  // Browser Geolocation does not expose satellite count; keep it unknown.
+  gpsEl.textContent='—';
+  setGpsState('active','GPS: ON');
+  centerOnPlane();
+  updateHud();
+}
+function onGpsError(err){
+  const msg=err.code===1?'GPS: Leidimas':err.code===2?'GPS: Nerasta':'GPS: Klaida';
+  setGpsState('error',msg);
+}
+function startGps(){
+  if(!navigator.geolocation){setGpsState('error','GPS: Nepalaikoma');return;}
+  if(gpsWatchId!==null) return;
+  setGpsState('waiting','GPS: Laukiama…');
+  gpsWatchId=navigator.geolocation.watchPosition(onGpsPosition,onGpsError,{enableHighAccuracy:true,maximumAge:1000,timeout:10000});
+}
+function stopGps(){
+  if(gpsWatchId!==null){navigator.geolocation.clearWatch(gpsWatchId);gpsWatchId=null;}
+  setGpsState('waiting','GPS: OFF');
+}
+
+let selectedDevice=null;
+let channelRole=null;
+let channelName=null;
+let selectingStart=true;
+let pendingStart=null;
+
+function formatDistance(m){
+  if(m < 1000) return Math.round(m)+' m';
+  if(m < 10000) return (m/1000).toFixed(2)+' km';
+  return (m/1000).toFixed(1)+' km';
+}
+function updateDistance(){
+  if(homePoint){ distanceEl.textContent=formatDistance(map.distance(homePoint,plane.getLatLng())); }
+  else distanceEl.textContent='—';
+}
+function selectStart(latlng){
+  pendingStart=latlng;
+  if(homeMarker) map.removeLayer(homeMarker);
+  homeMarker=L.marker(latlng,{icon:homeIcon,interactive:false,zIndexOffset:900}).addTo(map);
+  document.getElementById('startConfirmBar').style.display='block';
+}
+
+function confirmSelectedStart(){
+  if(!pendingStart) return;
+  homePoint=pendingStart;
+  pendingStart=null;
+  startSelected=true;
+  selectingStart=false;
+  document.getElementById('startConfirmBar').style.display='none';
+  plane.setLatLng(homePoint);
+  plane.addTo(map);
+  plane.options.draggable=true;
+  plane.dragging.enable();
+  trailPoints=[[homePoint.lat,homePoint.lng]];
+  route.setLatLngs(trailPoints);
+  updateHud();
+  startGps();
+}
+
+function scaleText(){
+  const el=document.querySelector('.leaflet-control-scale-line');
+  return el ? el.textContent : '—';
+}
+function updateHud(){
+  const p=plane.getLatLng();
+  latEl.textContent=p.lat.toFixed(5)+'°';
+  lonEl.textContent=p.lng.toFixed(5)+'°';
+  scaleEl.textContent=scaleText();
+  updateDistance();
+}
+
+function centerOnPlane(){if(centerMode)map.setView(plane.getLatLng(),map.getZoom(),{animate:false});}
+
+map.on('click',e=>{
+  if(selectingStart) selectStart(e.latlng);
+});
+map.on('zoomend',()=>{updateHud();centerOnPlane()});
+map.on('moveend',updateHud);
+map.on('dragstart',()=>{if(centerMode){centerMode=false;centerBtn.textContent='Centravimas: OFF';centerBtn.classList.remove('active')}});
+plane.on('dragstart',()=>{});
+plane.on('drag',()=>{
+  if(!startSelected) return;
+  const p=plane.getLatLng();
+  const last=trailPoints[trailPoints.length-1];
+  const dist=map.distance(last,p);
+  if(dist>=12){trailPoints.push([p.lat,p.lng]);if(trailPoints.length>1000)trailPoints.shift();route.setLatLngs(trailPoints)}
+  if(centerMode)centerOnPlane();
+  updateHud();
+});
+plane.on('dragend',()=>{if(centerMode)centerOnPlane();updateHud()});
+
+const channelOverlay=document.getElementById('channelOverlay');
+const channelChoices=document.getElementById('channelChoices');
+const createForm=document.getElementById('createForm');
+const joinForm=document.getElementById('joinForm');
+const channelIntro=document.getElementById('channelIntro');
+const channelStatus=document.getElementById('channelStatus');
+
+function showChannelMenu(){
+  channelOverlay.style.display='flex';
+  channelChoices.style.display='flex';
+  createForm.style.display='none';
+  joinForm.style.display='none';
+  channelStatus.style.display='none';
+  channelIntro.textContent='Pasirinkite, ką norite daryti.';
+}
+function showChannelForm(type){
+  channelChoices.style.display='none';
+  channelStatus.style.display='none';
+  if(type==='create'){
+    createForm.style.display='block';
+    joinForm.style.display='none';
+    channelIntro.textContent='Sukūrę kanalą automatiškai tapsite Command Station.';
+  } else {
+    createForm.style.display='none';
+    joinForm.style.display='block';
+    channelIntro.textContent='Prisijungęs įrenginys taps vieninteliu UAV šiame kanale.';
+  }
+}
+
+document.querySelectorAll('.deviceOption[data-device]').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    selectedDevice=btn.dataset.device;
+    document.body.classList.toggle('phone-mode',selectedDevice==='phone');
+    deviceOverlay.style.display='none';
+    showChannelMenu();
+  });
+});
+
+document.getElementById('createChannelBtn').addEventListener('click',()=>showChannelForm('create'));
+document.getElementById('joinChannelBtn').addEventListener('click',()=>showChannelForm('join'));
+
+document.getElementById('createConfirm').addEventListener('click',()=>{
+  const name=document.getElementById('channelNameCreate').value.trim();
+  const pass=document.getElementById('channelPasswordCreate').value;
+  if(!name||!pass){alert('Įveskite kanalo pavadinimą ir slaptažodį.');return;}
+  channelName=name; channelRole='command';
+  channelOverlay.style.display='none';
+  channelStatus.textContent='';
+  linkEl.textContent='Command Station';
+  linkEl.classList.add('connected');
+  // Serverio prijungimą pridėsime kitame etape.
+});
+
+document.getElementById('joinConfirm').addEventListener('click',()=>{
+  const name=document.getElementById('channelNameJoin').value.trim();
+  const pass=document.getElementById('channelPasswordJoin').value;
+  if(!name||!pass){alert('Įveskite kanalo pavadinimą ir slaptažodį.');return;}
+  channelName=name; channelRole='uav';
+  channelOverlay.style.display='none';
+  // Tikras prisijungimas prie serverio bus pridėtas kitame etape.
+});
+
+confirmStart.addEventListener('click',()=>{
+  startOverlay.style.display='none';
+  selectingStart=true;
+});
+
+document.getElementById('confirmSelected').addEventListener('click',confirmSelectedStart);
+
+gpsBtn.addEventListener('click',()=>{
+  if(gpsWatchId===null) startGps(); else stopGps();
+});
+
+centerBtn.addEventListener('click',()=>{
+  centerMode=!centerMode;
+  centerBtn.textContent='Centravimas: '+(centerMode?'ON':'OFF');
+  centerBtn.classList.toggle('active',centerMode);
+  if(centerMode)centerOnPlane();
+});
+
+document.getElementById('plus').addEventListener('click',()=>map.zoomIn());
+document.getElementById('minus').addEventListener('click',()=>map.zoomOut());
+
+updateHud();
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js').catch(err => console.warn('PWA service worker:', err));
+  });
+}
+</script>
+</body>
+</html>
