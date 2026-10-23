@@ -634,6 +634,20 @@ html,body {
   z-index: 2;
 }
 
+.cameraPlaceholder.loading::before {
+  content: '';
+  display: block;
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 12px;
+  border: 3px solid rgba(255,255,255,.2);
+  border-top-color: #9fa7af;
+  border-radius: 50%;
+  animation: camSpin .8s linear infinite;
+}
+@keyframes camSpin { to { transform: rotate(360deg); } }
+
+.cameraStage video {
 .cameraStage video {
   width: 100%;
   height: 100%;
@@ -923,7 +937,7 @@ html,body {
       <div class="infoTitle" id="selectedAircraftName">Bepilotis orlaivis</div>
       <div class="infoGrid">
         <div class="metric"><div class="label">Latitude</div><div class="value" id="infoLat">—</div></div>
-        <div class="metric"><div class="label">Longitude</div><div class="value" id="infoLon">—</div></div>
+        <div class="cameraStage" id="cameraStage"><div class="cameraPlaceholder loading" id="cameraPlaceholder">Jungiamasi prie UAV kameros…</div><video id="cameraVideo" autoplay playsinline muted style="display:none"></video></div>
         <div class="metric"><div class="label">Aukštis</div><div class="value" id="infoAltitude">—</div></div>
         <div class="metric"><div class="label">Atstumas iki pradžios</div><div class="value" id="infoDistance">—</div></div>
         <div class="metric"><div class="label">Greitis</div><div class="value" id="infoSpeed">—</div></div>
@@ -1175,7 +1189,7 @@ function cameraPath(id,viewer){
   return channelRef && channelRef.child('uavs/'+id+'/camera/'+viewer);
 }
 function setCameraStatus(text){
-  if(cameraPlaceholder){cameraPlaceholder.textContent=text;cameraPlaceholder.style.display=(text==='Live')?'none':'block';}
+  if(cameraPlaceholder){cameraPlaceholder.textContent=text;cameraPlaceholder.style.display=(text==='Live')?'none':'block';cameraPlaceholder.classList.toggle('loading',/^(Jungiamasi|Laukiama)/.test(text));}
 }
 function cleanupCameraPeer(){
   if(cameraOfferListener){cameraOfferListener.off();cameraOfferListener=null;}
